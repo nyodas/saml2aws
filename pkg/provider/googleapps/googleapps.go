@@ -122,10 +122,7 @@ func (kc *Client) Authenticate(loginDetails *creds.LoginDetails) (string, error)
 
 		logger.Debugf("captchaURL: %s", captchaURL)
 
-		_, captchaV1 := captchaForm["Passwd"]
-		if captchaV1 {
-			captchaForm.Set("Passwd", loginDetails.Password)
-		}
+		captchaForm.Set("Passwd", loginDetails.Password)
 		captchaForm.Set(captchaInputId, captcha)
 
 		responseDoc, err = kc.loadChallengePage(captchaURL+"?hl=en&loc=US", captchaURL, captchaForm, loginDetails)
@@ -138,6 +135,10 @@ func (kc *Client) Authenticate(loginDetails *creds.LoginDetails) (string, error)
 
 	// New Captcha proceeds back to password page
 	passworddBeingRequested := responseDoc.Find("#password")
+	if passworddBeingRequested == nil && passworddBeingRequested.Length() == 0 {
+		passworddBeingRequested = responseDoc.Find("#Passwd")
+	}
+
 	if passworddBeingRequested != nil && passworddBeingRequested.Length() > 0 {
 		loginForm, loginURL, err := extractInputsByFormID(responseDoc, "challenge")
 		if err != nil {
@@ -231,7 +232,6 @@ func (kc *Client) loadFirstPage(loginDetails *creds.LoginDetails) (string, url.V
 	if loginPageV1 {
 		// Login page v1
 		postForm = url.Values{
-			"bgresponse":               []string{"js_disabled"},
 			"checkConnection":          []string{""},
 			"checkedDomains":           []string{"youtube"},
 			"continue":                 []string{authForm.Get("continue")},
@@ -256,21 +256,25 @@ func (kc *Client) loadFirstPage(loginDetails *creds.LoginDetails) (string, url.V
 	} else {
 		// Login page v2
 		postForm = url.Values{
-			"challengeId":     []string{"1"},
-			"challengeType":   []string{"1"},
-			"continue":        []string{authForm.Get("continue")},
-			"scc":             []string{"1"},
-			"sarp":            []string{"1"},
-			"checkeddomains":  []string{"youtube"},
-			"checkConnection": []string{"youtube:930:1"},
-			"pstMessage":      []string{"1"},
-			"oauth":           []string{authForm.Get("oauth")},
-			"flowName":        []string{authForm.Get("flowName")},
-			"faa":             []string{"1"},
-			"Email":           []string{""},
-			"Passwd":          []string{""},
-			"TrustDevice":     []string{"on"},
-			"bgresponse":      []string{"js_disabled"},
+			"bgresponse":               []string{"js_disabled"},
+			"challengeId":              []string{"1"},
+			"challengeType":            []string{"1"},
+			"continue":                 []string{authForm.Get("continue")},
+			"scc":                      []string{"1"},
+			"sarp":                     []string{"1"},
+			"checkeddomains":           []string{"youtube"},
+			"checkConnection":          []string{"youtube:930:1"},
+			"Page":                     []string{authForm.Get("Page")},
+			"identifier-captcha-input": []string{""},
+			"identifiertoken":          []string{""},
+			"identifiertoken_audio":    []string{""},
+			"pstMessage":               []string{"1"},
+			"oauth":                    []string{authForm.Get("oauth")},
+			"flowName":                 []string{authForm.Get("flowName")},
+			"faa":                      []string{"1"},
+			"Email":                    []string{""},
+			"Passwd":                   []string{""},
+			"TrustDevice":              []string{"on"},
 		}
 		for _, k := range []string{"TL", "gxf"} {
 			if v, ok := authForm[k]; ok {
